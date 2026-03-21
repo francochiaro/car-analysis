@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>/*SEARCH_TITLE*/</title>
+<style>
+  :root {
+    --bg-primary: #0f1523;
+    --bg-secondary: #161d2f;
+    --bg-card: #1a2236;
+    --bg-card-hover: #1f2a42;
+    --bg-surface: #232d45;
+    --text-primary: #f1f3f7;
+    --text-secondary: #8b95a8;
+    --text-muted: #5a6478;
+    --border: #2a3550;
+    --accent: #4f8cff;
+    --accent-dim: #3a6ad4;
+
+    --verdict-bargain: #10b981;
+    --verdict-bargain-bg: rgba(16, 185, 129, 0.12);
+    --verdict-top: #3b82f6;
+    --verdict-top-bg: rgba(59, 130, 246, 0.12);
+    --verdict-good: #64748b;
+    --verdict-good-bg: rgba(100, 116, 139, 0.12);
+    --verdict-caution: #f59e0b;
+    --verdict-caution-bg: rgba(245, 158, 11, 0.12);
+    --verdict-nogo: #ef4444;
+    --verdict-nogo-bg: rgba(239, 68, 68, 0.12);
+
+    --fuel-electric: #10b981;
+    --fuel-phev: #14b8a6;
+    --fuel-hybrid: #2dd4bf;
+    --fuel-mild: #38bdf8;
+    --fuel-diesel: #94a3b8;
+    --fuel-gasoline: #fb923c;
+
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Header */
+  .hero {
+    background: linear-gradient(135deg, #0f1523 0%, #1a2744 50%, #162040 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 24px 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 50%, rgba(79, 140, 255, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 30%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .subtitle {
+    color: var(--text-secondary);
+    font-size: clamp(0.85rem, 2vw, 1rem);
+    font-weight: 400;
+    position: relative;
+  }
+  .hero .subtitle strong { color: var(--text-primary); font-weight: 600; }
+
+  /* Stats Bar */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 20px 24px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 20px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .stat-card .stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-card .stat-value.stat-platforms {
+    font-size: 0.95rem;
+  }
+  .stat-card .stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Controls */
+  .controls {
+    padding: 20px 24px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .controls-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+  }
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+    min-width: 160px;
+  }
+  .control-group label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .control-group select,
+  .control-group input[type="range"] {
+    width: 100%;
+  }
+  select {
+    appearance: none;
+    background: var(--bg-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b95a8' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 32px 8px 12px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color var(--transition);
+  }
+  select:hover { border-color: var(--accent-dim); }
+  select:focus { outline: none; border-color: var(--accent); }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+    margin-top: 4px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg-primary);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg-primary);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .range-value {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: right;
+    margin-top: 2px;
+    font-weight: 600;
+    min-height: 1.2em;
+  }
+
+  .results-count {
+    padding: 16px 24px 0;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .results-count strong { color: var(--text-secondary); }
+
+  /* Grid */
+  .grid {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 16px 24px 48px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 20px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+    border-color: var(--accent-dim);
+  }
+  .card a {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .card-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    display: block;
+    background: var(--bg-surface);
+    transition: transform 0.4s ease;
+  }
+  .card:hover .card-image {
+    transform: scale(1.03);
+  }
+  .card-image-wrapper {
+    overflow: hidden;
+    position: relative;
+  }
+
+  .rank-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(15, 21, 35, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+  .rank-badge span { color: var(--text-primary); }
+
+  .verdict-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .verdict-BARGAIN { background: var(--verdict-bargain-bg); color: var(--verdict-bargain); border: 1px solid rgba(16,185,129,0.3); }
+  .verdict-TOP { background: var(--verdict-top-bg); color: var(--verdict-top); border: 1px solid rgba(59,130,246,0.3); }
+  .verdict-GOOD { background: var(--verdict-good-bg); color: var(--verdict-good); border: 1px solid rgba(100,116,139,0.3); }
+  .verdict-CAUTION { background: var(--verdict-caution-bg); color: var(--verdict-caution); border: 1px solid rgba(245,158,11,0.3); }
+  .verdict-NO-GO { background: var(--verdict-nogo-bg); color: var(--verdict-nogo); border: 1px solid rgba(239,68,68,0.3); }
+
+  .card-body {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .card-make {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .card-model {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+  .card-variant {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+
+  .card-specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .spec {
+    display: flex;
+    flex-direction: column;
+  }
+  .spec-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  .spec-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .spec-value.price {
+    color: var(--accent);
+  }
+  .spec-value .orig-price {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-decoration: line-through;
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .spec-value .discount {
+    font-size: 0.7rem;
+    color: var(--verdict-bargain);
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  .card-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .fuel-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+  }
+  .fuel-Electric { background: rgba(16,185,129,0.15); color: var(--fuel-electric); }
+  .fuel-PHEV { background: rgba(20,184,166,0.15); color: var(--fuel-phev); }
+  .fuel-Hybrid { background: rgba(45,212,191,0.15); color: var(--fuel-hybrid); }
+  .fuel-MildHybrid { background: rgba(56,189,248,0.15); color: var(--fuel-mild); }
+  .fuel-Diesel { background: rgba(148,163,184,0.15); color: var(--fuel-diesel); }
+  .fuel-Gasoline { background: rgba(251,146,60,0.15); color: var(--fuel-gasoline); }
+
+  .platform-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.03em;
+  }
+  .platform-Clicars { background: rgba(59,130,246,0.15); color: #3b82f6; }
+  .platform-Flexicar { background: rgba(168,85,247,0.15); color: #a855f7; }
+
+  .hp-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(79,140,255,0.1);
+    color: var(--accent);
+  }
+  .year-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-secondary);
+  }
+
+  .card-costs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .cost {
+    text-align: center;
+  }
+  .cost-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+  .cost-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .card-eval {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    flex: 1;
+  }
+  .card-eval-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    transition: all 0.2s ease;
+  }
+  .card-eval-text.expanded {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+  }
+  .eval-toggle {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.72rem;
+    cursor: pointer;
+    padding: 2px 0 0;
+    font-family: inherit;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+  }
+  .eval-toggle:hover { opacity: 1; }
+
+  /* Cost tooltip */
+  .cost-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    z-index: 10;
+    pointer-events: none;
+  }
+  .cost-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--bg-surface);
+  }
+  .card-costs:hover .cost-tooltip {
+    display: block;
+  }
+  .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 2px 0;
+  }
+  .tooltip-row span:first-child { color: var(--text-muted); }
+  .tooltip-row span:last-child { color: var(--text-primary); font-weight: 600; }
+
+  /* No results */
+  .no-results {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+  }
+  .no-results h3 {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  /* Animations */
+  .card { animation: fadeUp 0.4s ease both; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .hero { padding: 32px 16px 24px; }
+    .stats-bar { padding: 12px 16px; gap: 8px; }
+    .stat-card { padding: 8px 14px; min-width: 120px; }
+    .stat-card .stat-value { font-size: 1.1rem; }
+    .controls { padding: 14px 16px; }
+    .controls-inner { gap: 10px; }
+    .control-group { min-width: 130px; }
+    .grid {
+      grid-template-columns: 1fr;
+      padding: 12px 16px 40px;
+      gap: 14px;
+    }
+    .card-image { height: 180px; }
+    .results-count { padding: 12px 16px 0; }
+  }
+
+  @media (max-width: 480px) {
+    .stat-card { min-width: 100px; }
+    .control-group { min-width: 100%; }
+  }
+
+  /* Verdict left bar accent */
+  .card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    z-index: 1;
+    transition: width var(--transition);
+  }
+  .card:hover::before { width: 4px; }
+  .card[data-verdict="BARGAIN"]::before { background: var(--verdict-bargain); }
+  .card[data-verdict="TOP PICK"]::before { background: var(--verdict-top); }
+  .card[data-verdict="GOOD"]::before { background: var(--verdict-good); }
+  .card[data-verdict="CAUTION"]::before { background: var(--verdict-caution); }
+  .card[data-verdict="NO-GO"]::before { background: var(--verdict-nogo); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+  }
+  .footer-note {
+    max-width: 900px;
+    margin: 0 auto 16px;
+    padding: 16px 20px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    text-align: left;
+  }
+  .footer-note strong { color: var(--text-primary); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>/*SEARCH_TITLE*/</h1>
+  <p class="subtitle">/*SEARCH_SUBTITLE*/</p>
+</div>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stat-card">
+    <div class="stat-value" id="statTotal">0</div>
+    <div class="stat-label">Cars Shown</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value stat-platforms" id="statPlatforms">--</div>
+    <div class="stat-label">Platform Split</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="statAvgPrice">--</div>
+    <div class="stat-label">Avg Price</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="statCheapestMonthly">--</div>
+    <div class="stat-label">Cheapest Monthly</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="statTopBargain">--</div>
+    <div class="stat-label">Top Bargain</div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="controls-inner">
+    <div class="control-group">
+      <label>Platform</label>
+      <select id="filterPlatform">
+        <option value="ALL">All Platforms</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Verdict</label>
+      <select id="filterVerdict">
+        <option value="ALL">All Verdicts</option>
+        <option value="BARGAIN">Bargain</option>
+        <option value="TOP PICK">Top Pick</option>
+        <option value="GOOD">Good</option>
+        <option value="CAUTION">Caution</option>
+        <option value="NO-GO">No-Go</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Fuel Type</label>
+      <select id="filterFuel">
+        <option value="ALL">All Fuels</option>
+        <option value="Electric">Electric</option>
+        <option value="PHEV">PHEV</option>
+        <option value="Hybrid">Hybrid</option>
+        <option value="Mild Hybrid">Mild Hybrid</option>
+        <option value="Diesel">Diesel</option>
+        <option value="Gasoline">Gasoline</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Max Price</label>
+      <input type="range" id="filterPrice" min="0" max="100000" value="100000" step="500">
+      <div class="range-value" id="priceValue">&euro;100,000</div>
+    </div>
+    <div class="control-group">
+      <label>Max Mileage</label>
+      <input type="range" id="filterMileage" min="0" max="300000" value="300000" step="5000">
+      <div class="range-value" id="mileageValue">300,000 km</div>
+    </div>
+    <div class="control-group">
+      <label>Sort By</label>
+      <select id="sortBy">
+        <option value="rank">Rank</option>
+        <option value="price">Price (Low to High)</option>
+        <option value="priceDesc">Price (High to Low)</option>
+        <option value="mileage">Mileage (Low to High)</option>
+        <option value="monthly">Monthly Cost</option>
+        <option value="yearlyService">Yearly Service</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="results-count" id="resultsCount"></div>
+<div class="grid" id="grid"></div>
+
+<div class="footer">
+  <div class="footer-note">
+    <strong>Note:</strong> Prices and availability are point-in-time snapshots. Always verify on the platform before purchasing.
+  </div>
+  Generated by Car Analysis &nbsp;&bull;&nbsp; Data freshness depends on scrape date
+</div>
+
+<script>
+const cars = /*CARS_JSON*/[];
+
+// Auto-configure filter ranges from data
+(function initFilters() {
+  if (cars.length === 0) return;
+
+  // Platform filter — dynamically populate from data
+  const platforms = [...new Set(cars.map(c => c.platform))].sort();
+  const platformSelect = document.getElementById('filterPlatform');
+  platforms.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    platformSelect.appendChild(opt);
+  });
+
+  // Price range
+  const prices = cars.map(c => c.price);
+  const minPrice = Math.floor(Math.min(...prices) / 500) * 500;
+  const maxPrice = Math.ceil(Math.max(...prices) / 500) * 500;
+  const priceSlider = document.getElementById('filterPrice');
+  priceSlider.min = minPrice;
+  priceSlider.max = maxPrice;
+  priceSlider.value = maxPrice;
+
+  // Mileage range
+  const mileages = cars.map(c => c.mileage);
+  const maxMileage = Math.ceil(Math.max(...mileages) / 5000) * 5000;
+  const mileageSlider = document.getElementById('filterMileage');
+  mileageSlider.min = 0;
+  mileageSlider.max = maxMileage;
+  mileageSlider.value = maxMileage;
+})();
+
+// Helpers
+function fmt(n) { return n.toLocaleString('es-ES'); }
+function fmtEur(n) { return '\u20AC' + fmt(n); }
+
+function verdictClass(v) {
+  if (v === 'TOP PICK') return 'verdict-TOP';
+  if (v === 'NO-GO') return 'verdict-NO-GO';
+  return 'verdict-' + v;
+}
+
+function fuelClass(f) {
+  return 'fuel-' + f.replace(/\s+/g, '');
+}
+
+function estimateFuelCost(car) {
+  switch(car.fuel) {
+    case 'Electric': return Math.round(car.monthly * 0.35);
+    case 'PHEV': return Math.round(car.monthly * 0.45);
+    case 'Hybrid': return Math.round(car.monthly * 0.55);
+    case 'Mild Hybrid': return Math.round(car.monthly * 0.6);
+    case 'Diesel': return Math.round(car.monthly * 0.65);
+    case 'Gasoline': return Math.round(car.monthly * 0.7);
+    default: return Math.round(car.monthly * 0.6);
+  }
+}
+
+function estimateInsurance(car) {
+  const hpSurcharge = car.hp >= 200 ? 8 : 0;
+  const make = car.make.toLowerCase();
+  if (['toyota','hyundai','kia','skoda'].includes(make)) return 42 + hpSurcharge;
+  if (['vw','volkswagen','cupra','mazda','mitsubishi'].includes(make)) return 46 + hpSurcharge;
+  if (['bmw','audi','volvo','lexus'].includes(make)) return 58 + hpSurcharge;
+  if (make === 'mercedes') return 67 + hpSurcharge;
+  if (make === 'tesla') return 50 + hpSurcharge;
+  if (make === 'alfa romeo') return 75 + hpSurcharge;
+  return 50 + hpSurcharge;
+}
+
+// Render
+function renderCard(car, idx) {
+  const fuelCost = estimateFuelCost(car);
+  const insurance = estimateInsurance(car);
+  const otherCosts = car.monthly - fuelCost - insurance;
+
+  return `
+    <div class="card" data-verdict="${car.verdict}" style="animation-delay: ${idx * 0.04}s">
+      <a href="${car.link}" target="_blank" rel="noopener">
+        <div class="card-image-wrapper">
+          <img class="card-image" src="${car.image}" alt="${car.make} ${car.model}" loading="lazy"
+               onerror="this.style.background='var(--bg-surface)';this.alt='Image unavailable'">
+          <span class="rank-badge">#<span>${car.rank}</span></span>
+          <span class="verdict-badge ${verdictClass(car.verdict)}">${car.verdict}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-make">${car.make}</div>
+          <div class="card-model">${car.model} ${car.variant.split(' ')[0]}</div>
+          <div class="card-variant">${car.variant}</div>
+
+          <div class="card-specs">
+            <div class="spec">
+              <span class="spec-label">Price</span>
+              <span class="spec-value price">${fmtEur(car.price)}${car.discount > 0 ? `<span class="orig-price">${fmtEur(car.origPrice)}</span><span class="discount">-${fmtEur(car.discount)}</span>` : ''}</span>
+            </div>
+            <div class="spec">
+              <span class="spec-label">Mileage</span>
+              <span class="spec-value">${fmt(car.mileage)} km</span>
+            </div>
+          </div>
+
+          <div class="card-badges">
+            <span class="platform-badge platform-${car.platform}">${car.platform}</span>
+            <span class="fuel-badge ${fuelClass(car.fuel)}">${car.fuel}</span>
+            <span class="hp-badge">${car.hp} HP</span>
+            <span class="year-badge">${car.year}</span>
+          </div>
+
+          <div class="card-costs">
+            <div class="cost">
+              <div class="cost-value">${fmtEur(car.monthly)}/mo</div>
+              <div class="cost-label">Monthly Budget</div>
+            </div>
+            <div class="cost">
+              <div class="cost-value">${fmtEur(car.yearlyService)}/yr</div>
+              <div class="cost-label">Service</div>
+            </div>
+            <div class="cost-tooltip">
+              <div class="tooltip-row"><span>Fuel/Charging</span><span>${fmtEur(fuelCost)}/mo</span></div>
+              <div class="tooltip-row"><span>Insurance (est.)</span><span>${fmtEur(insurance)}/mo</span></div>
+              <div class="tooltip-row"><span>Other costs</span><span>${fmtEur(Math.max(0, otherCosts))}/mo</span></div>
+              <div class="tooltip-row" style="border-top:1px solid var(--border);padding-top:4px;margin-top:2px"><span>Total monthly</span><span>${fmtEur(car.monthly)}/mo</span></div>
+              <div class="tooltip-row"><span>Yearly service</span><span>${fmtEur(car.yearlyService)}/yr</span></div>
+            </div>
+          </div>
+
+          <div class="card-eval">
+            <div class="card-eval-text">${car.eval}</div>
+            <button class="eval-toggle" onclick="event.preventDefault();event.stopPropagation();const t=this.previousElementSibling;const ex=t.classList.toggle('expanded');this.textContent=ex?'Show less':'Read more'">Read more</button>
+          </div>
+        </div>
+      </a>
+    </div>
+  `;
+}
+
+function updateStats(filtered) {
+  document.getElementById('statTotal').textContent = filtered.length;
+
+  // Dynamic platform split
+  const platformCounts = {};
+  filtered.forEach(c => { platformCounts[c.platform] = (platformCounts[c.platform] || 0) + 1; });
+  const platformText = Object.entries(platformCounts).map(([k, v]) => v + ' ' + k).join(' + ');
+  document.getElementById('statPlatforms').textContent = platformText || '--';
+
+  if (filtered.length === 0) {
+    document.getElementById('statAvgPrice').textContent = '--';
+    document.getElementById('statCheapestMonthly').textContent = '--';
+    document.getElementById('statTopBargain').textContent = '--';
+    document.getElementById('statPlatforms').textContent = '--';
+    return;
+  }
+
+  const avg = Math.round(filtered.reduce((s, c) => s + c.price, 0) / filtered.length);
+  document.getElementById('statAvgPrice').textContent = fmtEur(avg);
+
+  const cheapest = filtered.reduce((min, c) => c.monthly < min.monthly ? c : min, filtered[0]);
+  document.getElementById('statCheapestMonthly').textContent = fmtEur(cheapest.monthly) + '/mo';
+
+  const bargains = filtered.filter(c => c.verdict === 'BARGAIN');
+  if (bargains.length > 0) {
+    document.getElementById('statTopBargain').textContent = bargains[0].make + ' ' + bargains[0].model;
+  } else {
+    const best = filtered[0];
+    document.getElementById('statTopBargain').textContent = best.make + ' ' + best.model;
+  }
+}
+
+function render() {
+  const platform = document.getElementById('filterPlatform').value;
+  const verdict = document.getElementById('filterVerdict').value;
+  const fuel = document.getElementById('filterFuel').value;
+  const maxPrice = parseInt(document.getElementById('filterPrice').value);
+  const maxMileage = parseInt(document.getElementById('filterMileage').value);
+  const sortBy = document.getElementById('sortBy').value;
+
+  document.getElementById('priceValue').textContent = fmtEur(maxPrice);
+  document.getElementById('mileageValue').textContent = fmt(maxMileage) + ' km';
+
+  let filtered = cars.filter(c => {
+    if (platform !== 'ALL' && c.platform !== platform) return false;
+    if (verdict !== 'ALL' && c.verdict !== verdict) return false;
+    if (fuel !== 'ALL' && c.fuel !== fuel) return false;
+    if (c.price > maxPrice) return false;
+    if (c.mileage > maxMileage) return false;
+    return true;
+  });
+
+  switch (sortBy) {
+    case 'rank': filtered.sort((a, b) => a.rank - b.rank); break;
+    case 'price': filtered.sort((a, b) => a.price - b.price); break;
+    case 'priceDesc': filtered.sort((a, b) => b.price - a.price); break;
+    case 'mileage': filtered.sort((a, b) => a.mileage - b.mileage); break;
+    case 'monthly': filtered.sort((a, b) => a.monthly - b.monthly); break;
+    case 'yearlyService': filtered.sort((a, b) => a.yearlyService - b.yearlyService); break;
+  }
+
+  updateStats(filtered);
+
+  const resultsEl = document.getElementById('resultsCount');
+  resultsEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${cars.length} cars`;
+
+  const grid = document.getElementById('grid');
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="no-results"><h3>No cars match your filters</h3><p>Try adjusting the price range, mileage, or verdict filter.</p></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map((c, i) => renderCard(c, i)).join('');
+}
+
+// Event listeners
+['filterPlatform', 'filterVerdict', 'filterFuel', 'sortBy'].forEach(id => {
+  document.getElementById(id).addEventListener('change', render);
+});
+['filterPrice', 'filterMileage'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+});
+
+// Initial render
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+{
+  "_meta": {
+    "description": "Car ownership cost model for Spain",
+    "validated": "2026-03",
+    "assumptions": {
+      "annual_km": 15000,
+      "driver_age": 30,
+      "location": "Madrid",
+      "insurance_type": "Todo riesgo con franquicia 300\u20ac"
+    },
+    "sources": [
+      "Rastreator.com",
+      "RapidSecur.com",
+      "CHECK24 Seguros",
+      "KIA FAQ forum",
+      "SegurosNews 2025",
+      "km77.com",
+      "carwow.es",
+      "BMW FAQ forum",
+      "Club Toyota C-HR forum",
+      "Alfistas forum",
+      "Electromovilidad24"
+    ]
+  },
+  "fuel_monthly": {
+    "_note": "Monthly cost at 1250 km/month",
+    "Electric": 38,
+    "PHEV": 55,
+    "Hybrid": 84,
+    "Mild Hybrid": 126,
+    "Diesel": 109,
+    "Gasoline": 136
+  },
+  "insurance_monthly": {
+    "_note": "Base monthly rate, add hp_surcharge if 200+ HP",
+    "Toyota": 42,
+    "Hyundai": 42,
+    "Kia": 42,
+    "Skoda": 42,
+    "Volkswagen": 46,
+    "VW": 46,
+    "CUPRA": 46,
+    "Mazda": 46,
+    "Mitsubishi": 46,
+    "BMW": 58,
+    "Audi": 58,
+    "Volvo": 58,
+    "Lexus": 58,
+    "Tesla": 50,
+    "Mercedes": 67,
+    "Alfa Romeo": 75,
+    "hp_surcharge_threshold": 200,
+    "hp_surcharge_amount": 8
+  },
+  "service_annual": {
+    "_note": "Annual service cost, independent workshop",
+    "Tesla": 100,
+    "Toyota": 250,
+    "Lexus": 250,
+    "Hyundai": 250,
+    "Kia": 250,
+    "Mazda": 300,
+    "Mitsubishi": 300,
+    "Volkswagen": 350,
+    "VW": 350,
+    "Skoda": 350,
+    "CUPRA": 350,
+    "Volvo": 350,
+    "BMW": 400,
+    "Audi": 400,
+    "Mercedes": 400,
+    "Alfa Romeo": 400,
+    "_ev_override": {
+      "_note": "For full EVs, use these instead of brand rates",
+      "Tesla": 100,
+      "Kia": 150,
+      "Hyundai": 150,
+      "Volkswagen": 150,
+      "CUPRA": 150,
+      "BMW": 200,
+      "Volvo": 200,
+      "Lexus": 200,
+      "Mercedes": 200
+    }
+  }
+}
