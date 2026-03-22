@@ -1,0 +1,135 @@
+# Prototype Progress Log
+Started: Sun Mar 22 11:08:02 CET 2026
+---
+
+## 2026-03-22 - Story 1: Project Setup & Calculation Engine
+- Configured Tailwind v4 via @tailwindcss/vite plugin with custom dark theme (bg, surface, accent, positive/negative colors)
+- Replaced default index.css with dark financial theme using @theme directive
+- Created src/types.ts with all TypeScript interfaces (CarData, FinancialParams, CashflowMonth, CashflowResult, etc.)
+- Created src/lib/costModel.ts with Spanish market cost data + helper functions (getInsuranceMonthly, getFuelMonthly, getServiceAnnual, getBrandTier)
+- Created src/lib/financial.ts with pure calculation functions:
+  - frenchAmortization: French amortization schedule with fixed installments
+  - depreciateValue: Declining balance depreciation accounting for car's current age
+  - computeNPV: Net present value calculation
+  - computeCashflow: Full purchase scenario cashflow (down payment, ITP, gestoria, loan, insurance, fuel, service, ITV, residual)
+  - computeRentingCashflow: Renting scenario cashflow
+- Cleaned up App.tsx to minimal placeholder
+- npm run build passes with zero errors
+- Files created: src/types.ts, src/lib/costModel.ts, src/lib/financial.ts
+- Files modified: vite.config.ts, src/index.css, src/App.tsx
+- Files removed: src/App.css
+- **Learnings for future iterations:**
+  - Tailwind v4 uses @theme directive in CSS instead of tailwind.config.js
+  - @tailwindcss/vite plugin was already in devDependencies, just needed adding to vite.config.ts
+  - TypeScript strict mode with noUnusedLocals means all exports must be used or exported — keep functions pure and exported
+---
+
+## 2026-03-22 - Story 2: Car Data Ingestion & Parameter State
+- Created src/hooks/useCarData.ts — parses URL search params into CarData, derives brandTier, insurance/fuel/service rates from costModel
+- Created src/hooks/useFinancialParams.ts — reactive state for all financial params with defaults (80% loan, 7% APR, 60mo term, etc.), memoized cashflow recomputation via useMemo
+- Updated src/App.tsx — car info header with image/specs/cost rates, NPV placeholder, graceful handling when no URL params provided
+- npm run build passes with zero errors
+- Files created: src/hooks/useCarData.ts, src/hooks/useFinancialParams.ts
+- Files modified: src/App.tsx
+- **Learnings for future iterations:**
+  - useCarData returns derived cost model values (insurance, fuel, service) for display — avoids re-lookup in components
+  - useFinancialParams computes both purchase and renting cashflows in one hook — clean single source of truth
+  - URL params parsed with useMemo([], []) since they don't change after page load
+---
+
+## 2026-03-22 - Story 3: Purchase Cashflow Spreadsheet Table
+- Created src/components/CashflowTable.tsx — dense spreadsheet-style table with:
+  - Rows for all purchase line items (Down Payment, ITP, Gestoría, Loan, Insurance, Fuel, Service, ITV, Residual) + Monthly Total + Cumulative Total
+  - Columns for each month (M0 through M120), grouped by year with year headers (Y1, Y2...)
+  - Frozen first column (sticky left) for item labels
+  - Horizontal scroll for month columns
+  - Negative values in red, positive in green, zero shows "—" in muted color
+  - Alternating row backgrounds, summary rows (Total/Cumulative) get surface-alt bg
+  - Year header row with accent color at 20% opacity
+  - Monospace font, right-aligned numbers, compact cells
+  - Pure display component — receives CashflowResult, does no calculations
+- Updated src/App.tsx — replaced cashflow placeholder with CashflowTable component
+- npm run build passes with zero errors
+- Files created: src/components/CashflowTable.tsx
+- Files modified: src/App.tsx
+- **Learnings for future iterations:**
+  - Tailwind sticky + z-index works well for frozen columns in scrollable tables
+  - Using `w-max min-w-full` on the table allows it to expand beyond container for horizontal scroll
+  - The component is reusable but currently hardcodes purchase row definitions — will need refactoring for renting table in Story 4
+---
+
+## 2026-03-22 - Story 4: Renting Cashflow Table & NPV Summary
+- Refactored CashflowTable to accept configurable `rows` prop instead of hardcoded purchaseRows
+  - Exported `purchaseRows` and `rentingRows` row definitions from the component
+  - Made data prop generic (`GenericCashflowData` with `Record<string, number>` items) so both purchase and renting types work
+  - Added index signature `[key: string]: number` to CashflowItems interface in types.ts for TypeScript compatibility
+- Created src/components/NPVSummary.tsx with three cards: Purchase NPV, Renting NPV, Delta
+  - Delta card colored green/red based on which option wins (less negative = cheaper)
+  - Includes discount rate explanation line
+- Updated App.tsx: Purchase table → Renting table → NPV Summary layout
+- npm run build passes with zero errors
+- Files created: src/components/NPVSummary.tsx
+- Files modified: src/components/CashflowTable.tsx, src/App.tsx, src/types.ts
+- **Learnings for future iterations:**
+  - TypeScript interfaces don't satisfy Record<string, number> without explicit index signature
+  - Making table components accept row definitions as props is the right pattern for reuse across scenarios
+---
+
+## 2026-03-22 - Story 5: Parameters Panel
+- Created src/components/ParametersPanel.tsx — collapsible sidebar panel with:
+  - Fixed toggle button (top-right) showing "⚙ Parameters" / "✕ Close"
+  - Slide-in panel from right with backdrop overlay, doesn't push main content
+  - Four parameter groups: Loan, Renting, General, Taxes & Fees
+  - NumericInput component for step-based number inputs with prefix/suffix support
+  - SelectInput component for dropdown selectors (loan term, renting period, time horizon)
+  - Read-only cost model section showing insurance, fuel, service rates
+  - Immediate state updates via setParam — no submit button, tables/NPV recompute instantly
+- Updated src/App.tsx — added ParametersPanel component, wired setParam from useFinancialParams
+- npm run build passes with zero errors
+- Files created: src/components/ParametersPanel.tsx
+- Files modified: src/App.tsx
+- **Learnings for future iterations:**
+  - The useFinancialParams hook already exposed setParam — clean integration point
+  - CSS translate-x transition on fixed panels gives smooth slide-in without layout shift
+  - Backdrop click-to-close is important UX for overlay panels
+---
+
+## 2026-03-22 - Story 6: Car Comparison
+- Updated useCarData.ts to parse `cars` URL param (base64-encoded JSON array of all showcase cars) into CarData[]
+  - Handles both showcase schema (image_url, mileage_km, fuel_type, url) and app schema (image, mileage, fuel, link)
+- Created src/components/CarPicker.tsx — searchable dropdown to pick a comparison car
+  - Filters out the primary car from the list
+  - Search by make, model, variant text
+  - Shows fuel type, mileage, and price per car
+  - "Remove comparison" button when a car is selected
+- Refactored NPVSummary.tsx to accept an array of cars instead of single NPV values
+  - Single car mode: same 3-card layout as before
+  - Comparison mode: shows both cars' NPV rows + a "Best Purchase Deal" card highlighting the winner
+- Extracted CarHeader into a reusable component in App.tsx for displaying car info
+- App.tsx wires comparison state: comparisonCar + useMemo for comparisonCashflow using same params
+- Both cars share identical financial parameters; only car-specific costs differ (price, insurance, fuel, service, depreciation)
+- npm run build passes with zero errors
+- Files created: src/components/CarPicker.tsx
+- Files modified: src/hooks/useCarData.ts, src/components/NPVSummary.tsx, src/App.tsx
+- **Learnings for future iterations:**
+  - Base64 decoding with atob works fine for the car list; need to handle both naming conventions from scrapers
+  - NPVSummary refactor to accept an array makes it cleanly extensible for N-car comparison if needed
+  - The renting cashflow is car-independent (same monthly fee), so it's shared across both cars correctly
+---
+
+## 2026-03-22 - Story 7: Showcase Integration & Polish
+- Added "Back to Showcase" button in header (uses `backUrl` param or `window.history.back()`)
+- Added "View on platform" link when car has a `link` URL
+- Set dynamic page title: "Financial Model — {Make} {Model}"
+- Graceful handling of missing URL params already existed; added backUrl link to error state
+- Added print-friendly styles (@media print): white background, expanded tables without scroll, hidden interactive elements (parameters panel, back button), static columns (no sticky), readable colors
+- Wrapped ParametersPanel in print:hidden div
+- Added print:hidden to back/link bar and print:p-2 to main container
+- npm run build passes with zero errors, zero warnings
+- dist/ output: index.html + CSS + JS bundle, works as static files
+- Files modified: src/App.tsx, src/index.css, src/components/ParametersPanel.tsx
+- **Learnings for future iterations:**
+  - Tailwind v4's `print:hidden` variant works out of the box — no need for custom @media print rules for hiding
+  - For print CSS, overriding sticky positioning to static is important for table layout
+  - The `backUrl` param pattern is flexible — supports both showcase integration and standalone use
+---

@@ -1,14 +1,54 @@
 # Car Analysis
 
-An AI-powered used car search and evaluation tool for the Spanish market. It scrapes multiple platforms (Clicars, Flexicar), applies expert-level car knowledge to evaluate each listing, calculates total cost of ownership, and generates a visual HTML showcase with filters.
+An AI-powered used car search, evaluation, and financial modeling tool for the Spanish market. It scrapes multiple platforms (Clicars, Flexicar), applies expert-level car knowledge to evaluate each listing, calculates total cost of ownership, and generates a visual HTML showcase with a per-car financial model.
 
-This is a **full program** — not just a script. It has scrapers, a validated cost model, an HTML template engine, and a Claude Code skill that orchestrates the whole pipeline.
+This is a **full program** — not just a script. It has scrapers, a validated cost model, a financial analysis tool, an HTML template engine, and a Claude Code skill that orchestrates the whole pipeline.
+
+## How to Run
+
+**Important:** The showcase and financial model must be served over HTTP — they will NOT work opened as `file://` URLs (CORS blocks the React financial model).
+
+```bash
+cd ~/Documents/Car\ analysis
+
+# Start the local server (keep it running in the background)
+python3 -m http.server 8080 &
+```
+
+### From scratch (no data)
+
+```bash
+# Run the car search skill in Claude Code
+/car-search
+# Say something like: "BMW or Volvo under 25k, automatic"
+# Say "go" to auto-approve all operations
+
+# The pipeline generates the showcase at:
+# http://localhost:8080/output/showcase-YYYY-MM-DD.html
+```
+
+### With existing data
+
+```bash
+# Open the existing showcase
+# http://localhost:8080/Results/car-showcase-view.html
+
+# Click "Financial Model" on any car → opens the financial analysis
+```
+
+### If you update the financial model code
+
+```bash
+cd output/financial-model && npm run build
+# Then hard-refresh (Cmd+Shift+R) the browser
+```
 
 ## How It Works
 
 ```
 Free-text query → Filter parsing → Platform scrapers → Raw car data
 → Cost model application → Expert evaluation (by Claude) → Ranked HTML showcase + CSV
+→ Click any car → Financial Model (purchase vs renting cashflow, NPV comparison)
 ```
 
 ### Via Claude Code (recommended)
@@ -56,11 +96,56 @@ All CLI arguments are optional — defaults: €25k max, 2020+, automatic, all 1
 
 The scrapers output raw JSON. The evaluation, cost model, verdicts, and HTML/CSV generation are handled by Claude via the skill.
 
+## Financial Model
+
+Each car card in the showcase has a **"Financial Model"** button that opens a detailed cashflow analysis tool (React+Vite app).
+
+### What it computes
+
+- **Purchase scenario**: Monthly cashflow table with down payment, ITP, gestoría, French credit installments, insurance, fuel, service, ITV, and residual value at end of horizon
+- **Renting scenario**: Monthly fee with auto-renewal, inflation adjustment per period, and early termination penalty for incomplete final periods
+- **NPV comparison**: Discounted cashflow comparison of purchase vs renting, highlighting which option is cheaper
+
+### Configurable parameters
+
+All inputs are editable with instant recomputation:
+
+| Parameter | Default | What it affects |
+|-----------|---------|-----------------|
+| Loan amount | 80% of price | Down payment + installment size |
+| Interest rate (APR) | 7% | Monthly installment (French credit) |
+| Loan term | 60 months | Installment duration |
+| Renting fee | Estimated from car | Monthly renting outflow |
+| Renting period | 48 months | Contract length, auto-renews with inflation |
+| Time horizon | 48 months | Total analysis period |
+| Discount rate | 5% | NPV discounting |
+| Inflation rate | 2.5% | Inflates insurance, fuel, service, ITV, and renting renewals |
+| Annual km | 15,000 | Scales fuel cost, affects residual value and renting estimate |
+| Platform includes taxes | On | Zeroes ITP + gestoría for Clicars/Flexicar |
+
+### Car comparison
+
+Pick a second car from the list to compare cashflows and NPVs side-by-side using the same parameters.
+
+### Modifying the financial model
+
+The app was built with the Ralph iterative agent. To make changes:
+
+```bash
+cd output/financial-model
+# Edit prd.json — add/modify user stories
+./ralph.sh --tool claude 5
+npm run build
+```
+
 ## Setup
 
 ```bash
 pip3 install -r requirements.txt
 python3 -m playwright install chromium
+
+# Financial model (one-time)
+cd output/financial-model && npm install && npm run build
 ```
 
 ## Project Structure
@@ -80,9 +165,14 @@ Car analysis/
 │   └── cost-model.json        # Insurance, fuel, and service cost rates (validated)
 │
 ├── templates/
-│   └── showcase.html          # HTML template with placeholder for car data
+│   └── showcase.html          # HTML template with Financial Model CTA
 │
-├── output/                    # Generated files per run
+├── output/
+│   ├── financial-model/       # React+Vite financial model app
+│   │   ├── src/               # Source code
+│   │   ├── dist/              # Built production files (served by HTTP)
+│   │   ├── prd.json           # Ralph user stories
+│   │   └── ralph.sh           # Ralph iterative builder
 │   ├── showcase-YYYY-MM-DD.html
 │   └── cars-evaluated-YYYY-MM-DD.csv
 │
@@ -100,7 +190,8 @@ Car analysis/
 | `scrapers/flexicar.py` | Scrapes Flexicar SPA via headless Chromium (Playwright) | `python3` via Bash |
 | `scrapers/base.py` | Defines the `CarListing` schema that all scrapers output | Imported by scrapers |
 | `config/cost-model.json` | Insurance tiers, fuel costs, service rates — validated against real Spanish market data (March 2026) | Read by Claude during evaluation |
-| `templates/showcase.html` | Dark-themed card UI with filters, sorting, cost tooltips, expand/collapse evaluations | Template filled by Claude |
+| `templates/showcase.html` | Dark-themed card UI with filters, sorting, cost tooltips, Financial Model CTA | Template filled by Claude |
+| `output/financial-model/` | React app: cashflow tables, NPV, parameter panel, car comparison | Built with Ralph, served via HTTP |
 
 ## Supported Platforms
 

@@ -1,5 +1,9 @@
 Results/
-output/
+output/*
+!output/financial-model/
+output/financial-model/node_modules/
+output/financial-model/.last-branch
+output/financial-model/archive/
 *.DS_Store
 __pycache__/
 *.pyc

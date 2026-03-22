@@ -23,7 +23,9 @@ The main skill file is at `skill-car-search.md` in this directory. When Franco a
 4. Scrapers output normalized JSON to stdout
 5. Claude evaluates each car: assigns verdict, writes evaluation, calculates costs using `config/cost-model.json`
 6. Claude generates the final HTML (from template) and CSV
-7. Claude opens the HTML and presents a summary
+7. Claude serves the output via `python3 -m http.server 8080` and opens it in the browser
+   - **IMPORTANT**: Must serve over HTTP, not `file://` — the financial model is a React app that requires HTTP due to CORS
+8. Each car card has a "Financial Model" CTA that opens a detailed cashflow analysis (React app at `output/financial-model/dist/`)
 
 ## Environment
 - Python 3.9+ with `playwright` installed (browsers already set up)

@@ -310,6 +310,30 @@
   .verdict-CAUTION { background: var(--verdict-caution-bg); color: var(--verdict-caution); border: 1px solid rgba(245,158,11,0.3); }
   .verdict-NO-GO { background: var(--verdict-nogo-bg); color: var(--verdict-nogo); border: 1px solid rgba(239,68,68,0.3); }
 
+  .financial-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 10px 16px;
+    margin-top: 12px;
+    background: rgba(79, 140, 255, 0.1);
+    border: 1px solid rgba(79, 140, 255, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+    text-decoration: none;
+  }
+  .financial-cta:hover {
+    background: rgba(79, 140, 255, 0.2);
+    border-color: var(--accent);
+  }
+  .financial-cta svg { width: 16px; height: 16px; flex-shrink: 0; }
+
   .card-body {
     padding: 16px;
     flex: 1;
@@ -739,6 +763,20 @@ const cars = /*CARS_JSON*/[];
 function fmt(n) { return n.toLocaleString('es-ES'); }
 function fmtEur(n) { return '\u20AC' + fmt(n); }
 
+const FINANCIAL_MODEL_BASE = './financial-model/dist/index.html';
+function buildFinancialUrl(car) {
+  const params = new URLSearchParams({
+    make: car.make || '', model: car.model || '', variant: car.variant || '',
+    year: String(car.year || ''), price: String(car.price || ''),
+    mileage: String(car.mileage || ''), fuel: car.fuel || '',
+    hp: String(car.hp || ''), transmission: car.transmission || '',
+    platform: car.platform || '', image: car.image || '', link: car.link || ''
+  });
+  // Encode the full car list for comparison picker
+  try { params.set('cars', btoa(unescape(encodeURIComponent(JSON.stringify(cars))))); } catch(e) {}
+  return FINANCIAL_MODEL_BASE + '?' + params.toString();
+}
+
 function verdictClass(v) {
   if (v === 'TOP PICK') return 'verdict-TOP';
   if (v === 'NO-GO') return 'verdict-NO-GO';
@@ -833,6 +871,11 @@ function renderCard(car, idx) {
             <div class="card-eval-text">${car.eval}</div>
             <button class="eval-toggle" onclick="event.preventDefault();event.stopPropagation();const t=this.previousElementSibling;const ex=t.classList.toggle('expanded');this.textContent=ex?'Show less':'Read more'">Read more</button>
           </div>
+
+          <a class="financial-cta" href="${buildFinancialUrl(car)}" onclick="event.stopPropagation()" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="8" y1="3" x2="8" y2="21"/><line x1="14" y1="3" x2="14" y2="21"/><line x1="2" y1="15" x2="22" y2="15"/></svg>
+            Financial Model
+          </a>
         </div>
       </a>
     </div>

@@ -172,7 +172,18 @@ Sort all cars by: verdict weight (BARGAIN=5, TOP PICK=4, GOOD=3, CAUTION=2, NO-G
 
 2. **HTML**: Read `templates/showcase.html`, replace `/*CARS_JSON*/` with the JavaScript cars array, replace `/*SEARCH_META*/` with search metadata (query, date, count, platforms). Write to `output/showcase-{YYYY-MM-DD}.html`.
 
-3. Open the HTML: `open output/showcase-{YYYY-MM-DD}.html`
+3. **Financial Model build**: Rebuild the financial model app so it's ready for the showcase CTAs:
+   ```bash
+   cd "/Users/francochiaro/Documents/Car analysis/output/financial-model"
+   npm run build
+   ```
+
+4. **Serve locally**: Start a local HTTP server (required — `file://` won't work due to CORS with ES modules):
+   ```bash
+   cd "/Users/francochiaro/Documents/Car analysis"
+   python3 -m http.server 8080 &
+   ```
+   Then open: `http://localhost:8080/output/showcase-{YYYY-MM-DD}.html`
 
 ### Step 8 — Report Summary
 Present to the user:
@@ -197,3 +208,32 @@ Assumptions: 15,000 km/year, ~30yo driver in Madrid, todo riesgo con franquicia.
 - Flexicar shows two prices: cash (higher, used for comparison) and financed (lower, requires their financing)
 - Both scrapers output the same normalized JSON schema (see CLAUDE.md)
 - If a scraper fails, continue with the other platform and note the failure
+
+## Financial Model
+
+Each car card in the showcase has a "Financial Model" CTA that opens a standalone React app for cashflow analysis.
+
+### Architecture
+- **Location**: `output/financial-model/` (React+Vite+Tailwind, built with Ralph)
+- **Built assets**: `output/financial-model/dist/` — the showcase CTA links here
+- **Serving**: Must be served over HTTP (not `file://`) due to CORS. Use `python3 -m http.server 8080` from the project root
+- **Data flow**: Showcase passes car data as URL query params (make, model, price, year, mileage, fuel, hp, etc.). The full car list is base64-encoded in a `cars` param for the comparison picker.
+
+### What It Does
+- **Purchase scenario**: Monthly cashflow table (spreadsheet-style) with: down payment, ITP, gestoría, French credit installments, insurance, fuel, service, ITV, residual value at end of horizon
+- **Renting scenario**: Monthly fee cashflow for comparison
+- **NPV comparison**: Discounted cashflow comparison of purchase vs renting
+- **Parameters panel**: All inputs are configurable (loan amount, APR, term, renting fee, time horizon, discount rate, etc.) with instant recomputation
+- **Car comparison**: Pick a second car to compare financials side-by-side
+
+### Cost Model
+Uses the same rates from `config/cost-model.json` (baked into the app at build time). If the cost model is updated, rebuild:
+```bash
+cd output/financial-model && npm run build
+```
+
+### Modifying the Financial Model
+The app was built with Ralph. To make changes:
+1. Edit `output/financial-model/prd.json` — add/modify user stories
+2. Run `cd output/financial-model && ./ralph.sh --tool claude 5`
+3. Rebuild: `npm run build`

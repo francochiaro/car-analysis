@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0f1523;
+  --color-surface: #1a2236;
+  --color-surface-hover: #1f2a42;
+  --color-surface-alt: #232d45;
+  --color-text-primary: #f1f3f7;
+  --color-text-secondary: #8b95a8;
+  --color-text-muted: #5a6478;
+  --color-border: #2a3550;
+  --color-accent: #4f8cff;
+  --color-positive: #10b981;
+  --color-negative: #ef4444;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@media print {
+  body {
+    background: white;
+    color: #1a1a1a;
+    font-size: 10px;
+  }
+
+  /* Expand tables fully — no horizontal scroll */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+    font-size: 8px !important;
+  }
+
+  td, th {
+    padding: 1px 3px !important;
+    min-width: auto !important;
+  }
+
+  /* Remove backgrounds for readability */
+  .bg-surface, .bg-surface-alt, .bg-bg, .bg-surface-hover {
+    background: white !important;
+  }
+
+  .border, .border-border {
+    border-color: #ccc !important;
+  }
+
+  /* Keep negative/positive colors visible */
+  .text-negative { color: #dc2626 !important; }
+  .text-positive { color: #059669 !important; }
+  .text-accent { color: #2563eb !important; }
+  .text-text-primary { color: #1a1a1a !important; }
+  .text-text-secondary { color: #4a4a4a !important; }
+  .text-text-muted { color: #6a6a6a !important; }
+
+  /* Sticky columns should not be sticky in print */
+  .sticky { position: static !important; }
+}
