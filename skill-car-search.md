@@ -30,7 +30,7 @@ Convert the free-text query into these structured filters. Infer from context:
 | `max_mileage` | 150000 | "low mileage" = 60000, "moderate" = 100000 |
 | `fuel_types` | all | "electric", "hybrid", "diesel", "no diesel" |
 | `body_types` | all | "SUV", "estate", "hatchback", "sedan" |
-| `platforms` | clicars,flexicar | Can restrict to one platform |
+| `platforms` | clicars,flexicar,autohero,ocasionplus,autoscout24,cochesnet,autocasion | Can restrict to specific platforms |
 
 **Brand group shortcuts:**
 - "premium" / "German" → bmw, audi, mercedes, volvo
@@ -85,30 +85,60 @@ Convert free-text to structured filters using the rules above. Present to user f
 Run the platform scrapers in parallel when possible:
 
 ```bash
-# Clicars (HTTP-based, fast)
-cd "/Users/francochiaro/Documents/Car Analysis"
-python3 scrapers/clicars.py \
-  --max-price {max_price} \
-  --min-year {min_year} \
-  --transmission {transmission} \
-  --brands "{brands_csv}" \
-  --max-mileage {max_mileage} \
-  > output/clicars-raw.json 2>output/clicars-log.txt
+cd "/Users/francochiaro/car-analysis"
 
-# Flexicar (Playwright browser automation, slower)
+# Tier 0 — HTTP-based, fast (run in parallel)
+python3 scrapers/clicars.py \
+  --max-price {max_price} --min-year {min_year} --transmission {transmission} \
+  --brands "{brands_csv}" --max-mileage {max_mileage} \
+  > output/clicars-raw.json 2>output/clicars-log.txt &
+
+python3 scrapers/autohero.py \
+  --max-price {max_price} --min-year {min_year} --transmission {transmission} \
+  --brands "{brands_csv}" --max-mileage {max_mileage} \
+  > output/autohero-raw.json 2>output/autohero-log.txt &
+
+python3 scrapers/autocasion.py \
+  --max-price {max_price} --min-year {min_year} --transmission {transmission} \
+  --brands "{brands_csv}" --max-mileage {max_mileage} \
+  > output/autocasion-raw.json 2>output/autocasion-log.txt &
+
+python3 scrapers/ocasionplus.py \
+  --max-price {max_price} --min-year {min_year} --transmission {transmission} \
+  --brands "{brands_csv}" --max-mileage {max_mileage} \
+  > output/ocasionplus-raw.json 2>output/ocasionplus-log.txt &
+
+wait  # Wait for all HTTP scrapers to finish
+
+# Tier 1 — Playwright-based, slower (run sequentially to avoid browser contention)
 python3 scrapers/flexicar.py \
-  --max-price {max_price} \
-  --min-year {min_year} \
-  --transmission {transmission} \
-  --brands "{brands_csv}" \
-  --max-mileage {max_mileage} \
+  --max-price {max_price} --min-year {min_year} --transmission {transmission} \
+  --brands "{brands_csv}" --max-mileage {max_mileage} \
   > output/flexicar-raw.json 2>output/flexicar-log.txt
+
+python3 scrapers/autoscout24.py \
+  --max-price {max_price} --min-year {min_year} --transmission {transmission} \
+  --brands "{brands_csv}" --max-mileage {max_mileage} \
+  > output/autoscout24-raw.json 2>output/autoscout24-log.txt
+
+# Coches.net (Playwright HEADFUL — requires display, slowest)
+python3 scrapers/cochesnet.py \
+  --max-price {max_price} --min-year {min_year} --transmission {transmission} \
+  --brands "{brands_csv}" --max-mileage {max_mileage} \
+  > output/cochesnet-raw.json 2>output/cochesnet-log.txt
 ```
 
-Report progress: "Scraping Clicars... found X cars. Scraping Flexicar... found Y cars."
+**Platform notes:**
+- **Autohero**: Apollo state JSON, max ~71 unique cars (architectural cap — 24 per sort order × 4 sorts)
+- **OcasionPlus**: JSON-LD + HTML parsing. No server-side filtering (all post-filtered). JSON-LD has specs, HTML has discounted price + location.
+- **Coches.net**: Must run headful (not headless) — Adevinta bot detection. `SellerTypeId=1` = dealers only. Install `playwright-stealth` for best results.
+- **AutoScout24**: Headless Playwright works. Rich `data-*` attributes on cards. 20 results/page, max 20 pages per brand.
+- **Autocasión**: HTTP-based. No year filter in URL (post-filtered). Early termination on low-yield pages.
+
+Report progress at milestones: "HTTP scrapers done: X clicars + Y autohero + Z autocasion + W ocasionplus. Starting Playwright scrapers..."
 
 ### Step 3 — Load & Merge Results
-Read both JSON outputs. Deduplicate if a car appears on both platforms (match by make+model+year+mileage proximity). Total count.
+Read all JSON outputs (`output/*-raw.json`). Deduplicate across platforms if a car appears on multiple (match by make+model+year+mileage proximity). Total count.
 
 ### Step 4 — Apply Cost Model
 Read `config/cost-model.json`. For each car, calculate:
@@ -203,11 +233,23 @@ The cost model is at `config/cost-model.json`. It was validated against real Spa
 Assumptions: 15,000 km/year, ~30yo driver in Madrid, todo riesgo con franquicia.
 
 ## Notes
-- Clicars scraper pages through their server-rendered listing pages (12 cars/page)
-- Flexicar is a Next.js SPA — the scraper uses Playwright to render pages and extract from the DOM
-- Flexicar shows two prices: cash (higher, used for comparison) and financed (lower, requires their financing)
-- Both scrapers output the same normalized JSON schema (see CLAUDE.md)
-- If a scraper fails, continue with the other platform and note the failure
+
+### Platform-specific behavior
+| Platform | Method | Speed | Volume | Key Caveat |
+|----------|--------|-------|--------|------------|
+| Clicars | HTTP + BS4 | Fast | ~200 | Server-rendered, 12 cars/page |
+| Autohero | HTTP (Apollo JSON) | Fast | ~71 max | No server-side filtering, 24 cars × 4 sort orders |
+| Autocasión | HTTP + BS4 | Fast | ~1000+ | No year filter in URL → post-filtered |
+| OcasionPlus | HTTP (JSON-LD + HTML) | Fast | ~200+/brand | No server-side filtering. JSON-LD for specs, HTML for discounted price + location. |
+| Flexicar | Playwright | Medium | ~200 | Next.js SPA. Two prices: cash (higher) and financed (lower) |
+| AutoScout24 | Playwright | Medium | ~400/brand | Rich data-* attrs. 20/page, max 20 pages |
+| Coches.net | Playwright (headful) | Slow | ~1000+/brand | Adevinta bot detection → must run headful. Dealer-only via SellerTypeId=1 |
+
+### General
+- All scrapers output the same normalized JSON schema (see CLAUDE.md)
+- If a scraper fails, continue with the other platforms and note the failure
+- HTTP scrapers can run in parallel; Playwright scrapers should run sequentially
+- `playwright-stealth` is recommended for coches.net (install via `pip3 install playwright-stealth`)
 
 ## Financial Model
 
