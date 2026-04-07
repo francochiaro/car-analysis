@@ -769,6 +769,8 @@ function fmt(n) { return n.toLocaleString('es-ES'); }
 function fmtEur(n) { return '\u20AC' + fmt(n); }
 
 const FINANCIAL_MODEL_BASE = './financial-model/dist/index.html';
+// Store car list in localStorage so financial model can read it without URL bloat
+try { localStorage.setItem('carAnalysis_cars', JSON.stringify(cars)); } catch(e) {}
 function buildFinancialUrl(car) {
   const params = new URLSearchParams({
     make: car.make || '', model: car.model || '', variant: car.variant || '',
@@ -777,8 +779,6 @@ function buildFinancialUrl(car) {
     hp: String(car.hp || ''), transmission: car.transmission || '',
     platform: car.platform || '', image: car.image || '', link: car.link || ''
   });
-  // Encode the full car list for comparison picker
-  try { params.set('cars', btoa(unescape(encodeURIComponent(JSON.stringify(cars))))); } catch(e) {}
   return FINANCIAL_MODEL_BASE + '?' + params.toString();
 }
 

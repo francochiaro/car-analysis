@@ -1,6 +1,6 @@
 # Car Analysis
 
-An AI-powered used car search, evaluation, and financial modeling tool for the Spanish market. It scrapes multiple platforms (Clicars, Flexicar), applies expert-level car knowledge to evaluate each listing, calculates total cost of ownership, and generates a visual HTML showcase with a per-car financial model.
+An AI-powered used car search, evaluation, and financial modeling tool for the Spanish market. It scrapes 7 platforms, applies expert-level car knowledge to evaluate each listing, calculates total cost of ownership, and generates a visual HTML showcase with a per-car financial model.
 
 This is a **full program** — not just a script. It has scrapers, a validated cost model, a financial analysis tool, an HTML template engine, and a Claude Code skill that orchestrates the whole pipeline.
 
@@ -76,25 +76,22 @@ It will parse your query into structured filters, confirm them with you, then of
 Each scraper can run independently and outputs normalized JSON to stdout:
 
 ```bash
-# Clicars (HTTP-based, ~2 min)
 cd ~/Documents/Car\ analysis
+
+# Any scraper — same CLI interface
 python3 scrapers/clicars.py \
   --max-price 20000 \
   --min-year 2021 \
   --brands "bmw,volvo,lexus" \
   --transmission automatic \
   --max-mileage 100000
-
-# Flexicar (Playwright browser automation, ~5 min)
-python3 scrapers/flexicar.py \
-  --max-price 20000 \
-  --min-year 2021 \
-  --brands "bmw,volvo,lexus"
 ```
 
-All CLI arguments are optional — defaults: €25k max, 2020+, automatic, all 15 brands, 150k km max.
+All scrapers accept the same CLI arguments. Defaults: €25k max, 2020+, automatic, all brands, 150k km max.
 
 The scrapers output raw JSON. The evaluation, cost model, verdicts, and HTML/CSV generation are handled by Claude via the skill.
+
+When orchestrated via the skill, HTTP scrapers (Clicars, Autohero, Autocasión, OcasionPlus) run in parallel. Playwright scrapers (Flexicar, AutoScout24, Coches.net) run sequentially to avoid browser contention.
 
 ## Financial Model
 
@@ -158,8 +155,13 @@ Car analysis/
 ├── scrapers/                  # Platform scrapers (Python)
 │   ├── base.py                # Normalized car schema + CLI arg parser
 │   ├── utils.py               # Shared parsing (prices, mileage, fuel detection)
-│   ├── clicars.py             # Clicars — HTTP scraping (server-rendered)
-│   └── flexicar.py            # Flexicar — Playwright browser automation (SPA)
+│   ├── clicars.py             # Clicars — HTTP (server-rendered)
+│   ├── flexicar.py            # Flexicar — Playwright (Next.js SPA)
+│   ├── autohero.py            # Autohero — HTTP (Apollo GraphQL JSON)
+│   ├── ocasionplus.py         # OcasionPlus — HTTP (JSON-LD + HTML)
+│   ├── cochesnet.py           # Coches.net — Playwright headful (anti-bot)
+│   ├── autoscout24.py         # AutoScout24 — Playwright headless
+│   └── autocasion.py          # Autocasión — HTTP (server-rendered)
 │
 ├── config/
 │   └── cost-model.json        # Insurance, fuel, and service cost rates (validated)
@@ -186,8 +188,13 @@ Car analysis/
 | Component | Role | Runs how |
 |-----------|------|----------|
 | `skill-car-search.md` | Orchestration: filter parsing, evaluation logic, verdict rules, output generation | Read by Claude Code |
-| `scrapers/clicars.py` | Scrapes Clicars listing pages via HTTP requests + BeautifulSoup | `python3` via Bash |
-| `scrapers/flexicar.py` | Scrapes Flexicar SPA via headless Chromium (Playwright) | `python3` via Bash |
+| `scrapers/clicars.py` | Clicars — HTTP + BeautifulSoup | `python3` via Bash |
+| `scrapers/flexicar.py` | Flexicar — Playwright headless (Next.js SPA) | `python3` via Bash |
+| `scrapers/autohero.py` | Autohero — HTTP, parses Apollo GraphQL state from SSR | `python3` via Bash |
+| `scrapers/ocasionplus.py` | OcasionPlus — HTTP, JSON-LD structured data + HTML cards | `python3` via Bash |
+| `scrapers/cochesnet.py` | Coches.net — Playwright headful (Adevinta anti-bot) | `python3` via Bash |
+| `scrapers/autoscout24.py` | AutoScout24 — Playwright headless, data-* attributes | `python3` via Bash |
+| `scrapers/autocasion.py` | Autocasión — HTTP + BeautifulSoup (server-rendered) | `python3` via Bash |
 | `scrapers/base.py` | Defines the `CarListing` schema that all scrapers output | Imported by scrapers |
 | `config/cost-model.json` | Insurance tiers, fuel costs, service rates — validated against real Spanish market data (March 2026) | Read by Claude during evaluation |
 | `templates/showcase.html` | Dark-themed card UI with filters, sorting, cost tooltips, Financial Model CTA | Template filled by Claude |
@@ -195,10 +202,15 @@ Car analysis/
 
 ## Supported Platforms
 
-| Platform | Scraping Method | Notes |
-|----------|----------------|-------|
-| **Clicars** | HTTP + BeautifulSoup | Server-rendered. Paginates through listing pages (12 cars/page). Fast. |
-| **Flexicar** | Playwright (headless Chrome) | Next.js SPA. Renders ~12 cars per brand page via SSR. Scrapes detail pages for full specs. Slower. |
+| Platform | Scraping Method | Volume | Notes |
+|----------|----------------|--------|-------|
+| **Clicars** | HTTP + BeautifulSoup | ~200 | Server-rendered, 12 cars/page. Fast. |
+| **Flexicar** | Playwright headless | ~200 | Next.js SPA. Two prices: cash and financed. |
+| **Autohero** | HTTP (Apollo JSON) | ~71 | Parses GraphQL state from SSR HTML. No server-side filtering. |
+| **OcasionPlus** | HTTP (JSON-LD + HTML) | ~200+/brand | Specs in JSON-LD, prices + location in HTML. |
+| **Coches.net** | Playwright headful | ~1000+/brand | Adevinta bot detection — must run non-headless. Dealer-only filter. |
+| **AutoScout24** | Playwright headless | ~400/brand | Rich data-* attributes. Max 20 pages/brand. |
+| **Autocasión** | HTTP + BeautifulSoup | ~1000+ | No year filter in URL — results are post-filtered. |
 
 ## Adding a New Platform
 

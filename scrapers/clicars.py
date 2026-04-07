@@ -90,11 +90,13 @@ def parse_listing_page(html: str) -> list:
         text = link.get_text(separator="\n", strip=True)
         lines = [l.strip() for l in text.split("\n") if l.strip()]
 
-        # Find image
-        img = link.find("img")
+        # Find image — skip SVG badges, look for actual car photos
         image_url = ""
-        if img:
-            image_url = img.get("src") or img.get("data-src") or ""
+        for img in link.find_all("img"):
+            src = img.get("src") or img.get("data-src") or ""
+            if src and not src.endswith(".svg"):
+                image_url = src
+                break
 
         car = CarListing(platform="clicars", url=url, image_url=image_url)
 

@@ -34,9 +34,13 @@ Convert the free-text query into these structured filters. Infer from context:
 
 **Brand group shortcuts:**
 - "premium" / "German" → bmw, audi, mercedes, volvo
-- "Japanese" → toyota, lexus, mazda
+- "Japanese" → toyota, lexus, mazda, honda, nissan, subaru
 - "Korean" → hyundai, kia
-- "all" → alfa-romeo, audi, bmw, cupra, hyundai, kia, lexus, mazda, mercedes, mitsubishi, skoda, tesla, toyota, volkswagen, volvo
+- "British" → jaguar
+- "Chinese EV" → byd
+- "all" → alfa-romeo, audi, bmw, byd, cupra, honda, hyundai, jaguar, kia, lexus, mazda, mercedes, mitsubishi, nissan, porsche, skoda, subaru, tesla, toyota, volkswagen, volvo
+
+**Note:** Clicars uses opaque numeric brand IDs — it only supports the original 15 brands (no honda, nissan, subaru, jaguar, porsche, byd). Other scrapers support all 21 brands via URL slugs.
 
 ### Confirming Filters
 After parsing, show the user the interpreted filters in a table and ask: "Look good? Hit enter to run or adjust anything."
@@ -140,6 +144,17 @@ Report progress at milestones: "HTTP scrapers done: X clicars + Y autohero + Z a
 ### Step 3 — Load & Merge Results
 Read all JSON outputs (`output/*-raw.json`). Deduplicate across platforms if a car appears on multiple (match by make+model+year+mileage proximity). Total count.
 
+**Data cleaning (CRITICAL — do this before evaluation):**
+1. **Fix Tesla model names**: Autocasión puts "Model" as the model field. Parse variant to detect "Model 3" vs "Model Y" and fix the model field.
+2. **Extract HP from variant text**: Many scrapers don't extract HP. Parse it from variant strings: `(\d{2,3})\s*CV`, `([\d,]+)\s*kW` (×1.36), etc.
+3. **Fix fuel types from variant**: If variant contains "48V" or "MHEV", change fuel_type from "Gasoline" to "Mild Hybrid". If "hybrid"/"híbrido" → "Hybrid". If "e-hybrid"/"phev" → "PHEV".
+4. **Price sanity filter — remove damaged/salvage cars**: Cars priced far below market are likely crashed. Apply minimum sane price floors:
+   - Tesla Model Y: €25,000 | Tesla Model 3: €18,000
+   - BMW Serie 1/2: €17,000 | Audi A1: €16,000
+   - Mercedes Clase A: €17,000 | Clase C: €20,000
+   - Jaguar E-Pace: €15,000 | Volvo XC40: €18,000
+   - Any car priced >40% below typical market → flag and investigate
+
 ### Step 4 — Apply Cost Model
 Read `config/cost-model.json`. For each car, calculate:
 - **Monthly fuel/charging cost** based on fuel_type
@@ -202,15 +217,35 @@ Sort all cars by: verdict weight (BARGAIN=5, TOP PICK=4, GOOD=3, CAUTION=2, NO-G
 
 2. **HTML**: Read `templates/showcase.html`, replace `/*CARS_JSON*/` with the JavaScript cars array, replace `/*SEARCH_META*/` with search metadata (query, date, count, platforms). Write to `output/showcase-{YYYY-MM-DD}.html`.
 
+   **CRITICAL — Field name mapping for the showcase template:**
+   The template JS expects these EXACT field names (NOT the scraper field names):
+   ```
+   Scraper field     →  Showcase field
+   ─────────────────────────────────────
+   url               →  link
+   image_url         →  image
+   mileage_km        →  mileage
+   fuel_type         →  fuel
+   monthly_budget    →  monthly
+   yearly_service    →  yearlyService
+   original_price    →  origPrice
+   (calculated)      →  discount  (origPrice - price, or 0)
+   evaluation        →  eval
+   ```
+   All other fields (rank, verdict, make, model, variant, year, price, hp, transmission, location, body_type, platform) keep their names.
+
 3. **Financial Model build**: Rebuild the financial model app so it's ready for the showcase CTAs:
    ```bash
-   cd "/Users/francochiaro/Documents/Car analysis/output/financial-model"
-   npm run build
+   cd "/Users/francochiaro/car-analysis/output/financial-model"
+   npm install && ./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build
    ```
+   Note: `tsc` is not globally installed — use the local binary via `./node_modules/.bin/tsc`.
+   
+   The showcase stores the full car list in `localStorage` (key: `carAnalysis_cars`). The financial model reads from localStorage first, falling back to URL params. This avoids URL length overflow with large car lists.
 
 4. **Serve locally**: Start a local HTTP server (required — `file://` won't work due to CORS with ES modules):
    ```bash
-   cd "/Users/francochiaro/Documents/Car analysis"
+   cd "/Users/francochiaro/car-analysis"
    python3 -m http.server 8080 &
    ```
    Then open: `http://localhost:8080/output/showcase-{YYYY-MM-DD}.html`

@@ -41,9 +41,10 @@ class SearchFilters:
     min_year: int = 2020
     transmission: str = "automatic"
     brands: List[str] = field(default_factory=lambda: [
-        "alfa-romeo", "audi", "bmw", "cupra", "hyundai", "kia",
-        "lexus", "mazda", "mercedes", "mitsubishi", "skoda",
-        "tesla", "toyota", "volkswagen", "volvo"
+        "alfa-romeo", "audi", "bmw", "byd", "cupra", "honda", "hyundai",
+        "jaguar", "kia", "lexus", "mazda", "mercedes", "mitsubishi",
+        "nissan", "porsche", "skoda", "subaru", "tesla", "toyota",
+        "volkswagen", "volvo"
     ])
     max_mileage: int = 150000
     fuel_types: List[str] = field(default_factory=list)  # empty = all
@@ -92,9 +93,10 @@ def parse_cli_args() -> SearchFilters:
     args = parser.parse_args()
 
     all_brands = [
-        "alfa-romeo", "audi", "bmw", "cupra", "hyundai", "kia",
-        "lexus", "mazda", "mercedes", "mitsubishi", "skoda",
-        "tesla", "toyota", "volkswagen", "volvo"
+        "alfa-romeo", "audi", "bmw", "byd", "cupra", "honda", "hyundai",
+        "jaguar", "kia", "lexus", "mazda", "mercedes", "mitsubishi",
+        "nissan", "porsche", "skoda", "subaru", "tesla", "toyota",
+        "volkswagen", "volvo"
     ]
 
     brands = all_brands if args.brands == "all" else [b.strip() for b in args.brands.split(",")]

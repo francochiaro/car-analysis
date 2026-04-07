@@ -87,6 +87,24 @@ Every scraper outputs this structure per car:
 | AutoScout24 | Playwright | ~400/brand | Rich data-* attrs. Max 20 pages/brand |
 | Coches.net | Playwright headful | ~1000+/brand | Adevinta bot detection → headful only. Dealer-only via SellerTypeId=1 |
 
+## Known Gotchas (Lessons Learned)
+
+1. **Showcase field name mapping**: The HTML template (`templates/showcase.html`) uses DIFFERENT field names than the scrapers. When building the `/*CARS_JSON*/` array, you MUST rename: `url→link`, `image_url→image`, `mileage_km→mileage`, `fuel_type→fuel`, `monthly_budget→monthly`, `yearly_service→yearlyService`, `original_price→origPrice`, `evaluation→eval`. Calculate `discount = origPrice - price`. See skill Step 7 for full mapping.
+
+2. **Financial model build**: `tsc` is NOT globally installed. Use `./node_modules/.bin/tsc -b && ./node_modules/.bin/vite build` (or `npm install` first if `node_modules` is missing). The showcase stores the car list in `localStorage` (key: `carAnalysis_cars`) — do NOT base64-encode the full list in URL params (causes URL overflow with >50 cars).
+
+3. **Clicars images**: The first `<img>` inside card `<a>` tags is often a badge SVG, not the car photo. The scraper skips `.svg` files and grabs the first real photo (usually from `storage.googleapis.com`).
+
+4. **Salvage/damaged cars**: Platforms like Autocasión list crashed/salvage vehicles at suspiciously low prices with no clear damage flag. Apply price sanity floors before evaluation (see skill Step 3).
+
+5. **Tesla model names on Autocasión**: The model field often comes through as just "Model" instead of "Model 3" or "Model Y". Parse the variant field to fix.
+
+6. **HP extraction**: Most scrapers (especially Autocasión, OcasionPlus) don't extract HP directly. Parse it from variant text: match `(\d{2,3})\s*CV` or `([\d,]+)\s*kW` (×1.36 for HP).
+
+7. **Fuel type detection**: Variants containing "48V" or "MHEV" are Mild Hybrid, not Gasoline. Fix fuel_type during data cleaning.
+
+8. **Clicars brand IDs**: Clicars uses opaque numeric IDs for brands. New brands need their ID discovered from the website — the scraper silently skips unknown brands.
+
 ## Cost Model
 The cost model at `config/cost-model.json` contains validated rates from real Spanish market data (Rastreator, KIA FAQ forum, km77, Alfistas, RapidSecur, etc. — researched March 2026). Do not modify without re-validation.
 

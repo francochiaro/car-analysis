@@ -16,12 +16,9 @@ export interface CarDataResult {
   serviceAnnual: number;
 }
 
-function parseCarsFromParam(params: URLSearchParams): CarData[] {
-  const encoded = params.get("cars");
-  if (!encoded) return [];
+function parseCarsParam(raw: string): CarData[] {
   try {
-    const json = atob(encoded);
-    const arr = JSON.parse(json);
+    const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
     return arr
       .filter((c: Record<string, unknown>) => c.make && c.model && c.price)
@@ -39,6 +36,22 @@ function parseCarsFromParam(params: URLSearchParams): CarData[] {
         image: String(c.image_url ?? c.image ?? ""),
         link: String(c.url ?? c.link ?? ""),
       }));
+  } catch {
+    return [];
+  }
+}
+
+function parseCarsFromParam(params: URLSearchParams): CarData[] {
+  // Try localStorage first (set by showcase), fall back to URL param
+  try {
+    const stored = localStorage.getItem("carAnalysis_cars");
+    if (stored) return parseCarsParam(stored);
+  } catch { /* ignore */ }
+
+  const encoded = params.get("cars");
+  if (!encoded) return [];
+  try {
+    return parseCarsParam(atob(encoded));
   } catch {
     return [];
   }
