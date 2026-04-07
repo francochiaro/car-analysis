@@ -180,6 +180,88 @@
   select:hover { border-color: var(--accent-dim); }
   select:focus { outline: none; border-color: var(--accent); }
 
+  /* Multi-select dropdown with checkboxes */
+  .ms-dropdown {
+    position: relative;
+  }
+  .ms-trigger {
+    appearance: none;
+    width: 100%;
+    background: var(--bg-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238b95a8' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 32px 8px 12px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color var(--transition);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ms-trigger:hover { border-color: var(--accent-dim); }
+  .ms-dropdown.open .ms-trigger { border-color: var(--accent); }
+  .ms-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 100%;
+    max-height: 260px;
+    overflow-y: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    z-index: 200;
+    padding: 4px 0;
+  }
+  .ms-dropdown.open .ms-menu { display: block; }
+  .ms-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  .ms-option:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+  .ms-option input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+  .ms-option .ms-count {
+    margin-left: auto;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+  }
+  .pagination button {
+    padding: 10px 28px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .pagination button:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+  .pagination button:disabled { opacity: 0.3; cursor: default; }
+  .pagination .page-info { color: var(--text-secondary); font-size: 0.85rem; }
+
   input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
@@ -668,38 +750,31 @@
   <div class="controls-inner">
     <div class="control-group">
       <label>Platform</label>
-      <select id="filterPlatform">
-        <option value="ALL">All Platforms</option>
-      </select>
+      <div class="ms-dropdown" id="filterPlatform" data-filter="platform">
+        <div class="ms-trigger">All Platforms</div>
+        <div class="ms-menu"></div>
+      </div>
     </div>
     <div class="control-group">
       <label>Verdict</label>
-      <select id="filterVerdict">
-        <option value="ALL">All Verdicts</option>
-        <option value="BARGAIN">Bargain</option>
-        <option value="TOP PICK">Top Pick</option>
-        <option value="GOOD">Good</option>
-        <option value="CAUTION">Caution</option>
-        <option value="NO-GO">No-Go</option>
-      </select>
+      <div class="ms-dropdown" id="filterVerdict" data-filter="verdict">
+        <div class="ms-trigger">All Verdicts</div>
+        <div class="ms-menu"></div>
+      </div>
     </div>
     <div class="control-group">
       <label>Fuel Type</label>
-      <select id="filterFuel">
-        <option value="ALL">All Fuels</option>
-        <option value="Electric">Electric</option>
-        <option value="PHEV">PHEV</option>
-        <option value="Hybrid">Hybrid</option>
-        <option value="Mild Hybrid">Mild Hybrid</option>
-        <option value="Diesel">Diesel</option>
-        <option value="Gasoline">Gasoline</option>
-      </select>
+      <div class="ms-dropdown" id="filterFuel" data-filter="fuel">
+        <div class="ms-trigger">All Fuels</div>
+        <div class="ms-menu"></div>
+      </div>
     </div>
     <div class="control-group">
       <label>Body Type</label>
-      <select id="filterBody">
-        <option value="ALL">All Types</option>
-      </select>
+      <div class="ms-dropdown" id="filterBody" data-filter="body_type">
+        <div class="ms-trigger">All Types</div>
+        <div class="ms-menu"></div>
+      </div>
     </div>
     <div class="control-group">
       <label>Max Price</label>
@@ -727,6 +802,7 @@
 
 <div class="results-count" id="resultsCount"></div>
 <div class="grid" id="grid"></div>
+<div class="pagination" id="pagination"></div>
 
 <div class="footer">
   <div class="footer-note">
@@ -738,29 +814,78 @@
 <script>
 const cars = /*CARS_JSON*/[];
 
+// ── Pagination state ──
+const PAGE_SIZE = 60;
+let currentPage = 1;
+let lastFiltered = [];
+
+// ── Multi-select dropdown state ──
+const activeFilters = { verdict: new Set(), fuel: new Set(), body_type: new Set(), platform: new Set() };
+
+function buildMsDropdown(id, values, counts, allLabel) {
+  const wrapper = document.getElementById(id);
+  const trigger = wrapper.querySelector('.ms-trigger');
+  const menu = wrapper.querySelector('.ms-menu');
+  const filterKey = wrapper.dataset.filter;
+
+  trigger.textContent = allLabel;
+  menu.innerHTML = '';
+  values.forEach(v => {
+    const opt = document.createElement('label');
+    opt.className = 'ms-option';
+    opt.innerHTML = `<input type="checkbox" value="${v}"><span>${v}</span><span class="ms-count">${counts[v] || 0}</span>`;
+    const cb = opt.querySelector('input');
+    cb.addEventListener('change', () => {
+      if (cb.checked) activeFilters[filterKey].add(v);
+      else activeFilters[filterKey].delete(v);
+      const sel = activeFilters[filterKey];
+      trigger.textContent = sel.size === 0 ? allLabel : sel.size === 1 ? [...sel][0] : `${sel.size} selected`;
+      currentPage = 1;
+      render();
+    });
+    menu.appendChild(opt);
+  });
+
+  // Toggle open/close
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.ms-dropdown.open').forEach(d => { if (d !== wrapper) d.classList.remove('open'); });
+    wrapper.classList.toggle('open');
+  });
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.ms-dropdown')) {
+    document.querySelectorAll('.ms-dropdown.open').forEach(d => d.classList.remove('open'));
+  }
+});
+
 // Auto-configure filter ranges from data
 (function initFilters() {
   if (cars.length === 0) return;
 
-  // Platform filter — dynamically populate from data
-  const platforms = [...new Set(cars.map(c => c.platform))].sort();
-  const platformSelect = document.getElementById('filterPlatform');
-  platforms.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p;
-    opt.textContent = p;
-    platformSelect.appendChild(opt);
-  });
+  // Verdict
+  const verdictOrder = ['BARGAIN', 'TOP PICK', 'GOOD', 'CAUTION', 'NO-GO'];
+  const verdictCounts = {};
+  cars.forEach(c => { verdictCounts[c.verdict] = (verdictCounts[c.verdict] || 0) + 1; });
+  buildMsDropdown('filterVerdict', verdictOrder.filter(v => verdictCounts[v]), verdictCounts, 'All Verdicts');
 
-  // Body type filter — dynamically populate from data
-  const bodyTypes = [...new Set(cars.map(c => c.body_type).filter(Boolean))].sort();
-  const bodySelect = document.getElementById('filterBody');
-  bodyTypes.forEach(b => {
-    const opt = document.createElement('option');
-    opt.value = b;
-    opt.textContent = b;
-    bodySelect.appendChild(opt);
-  });
+  // Body type
+  const bodyCounts = {};
+  cars.forEach(c => { const b = c.body_type || 'Other'; bodyCounts[b] = (bodyCounts[b] || 0) + 1; });
+  buildMsDropdown('filterBody', Object.keys(bodyCounts).sort((a, b) => bodyCounts[b] - bodyCounts[a]), bodyCounts, 'All Types');
+
+  // Fuel
+  const fuelOrder = ['Electric', 'PHEV', 'Hybrid', 'Mild Hybrid', 'Diesel', 'Gasoline'];
+  const fuelCounts = {};
+  cars.forEach(c => { fuelCounts[c.fuel] = (fuelCounts[c.fuel] || 0) + 1; });
+  buildMsDropdown('filterFuel', fuelOrder.filter(f => fuelCounts[f]), fuelCounts, 'All Fuels');
+
+  // Platform
+  const platCounts = {};
+  cars.forEach(c => { platCounts[c.platform] = (platCounts[c.platform] || 0) + 1; });
+  buildMsDropdown('filterPlatform', Object.keys(platCounts).sort(), platCounts, 'All Platforms');
 
   // Price range
   const prices = cars.map(c => c.price);
@@ -936,10 +1061,6 @@ function updateStats(filtered) {
 }
 
 function render() {
-  const platform = document.getElementById('filterPlatform').value;
-  const verdict = document.getElementById('filterVerdict').value;
-  const fuel = document.getElementById('filterFuel').value;
-  const bodyType = document.getElementById('filterBody').value;
   const maxPrice = parseInt(document.getElementById('filterPrice').value);
   const maxMileage = parseInt(document.getElementById('filterMileage').value);
   const sortBy = document.getElementById('sortBy').value;
@@ -947,11 +1068,13 @@ function render() {
   document.getElementById('priceValue').textContent = fmtEur(maxPrice);
   document.getElementById('mileageValue').textContent = fmt(maxMileage) + ' km';
 
+  const fV = activeFilters.verdict, fF = activeFilters.fuel, fB = activeFilters.body_type, fP = activeFilters.platform;
+
   let filtered = cars.filter(c => {
-    if (platform !== 'ALL' && c.platform !== platform) return false;
-    if (verdict !== 'ALL' && c.verdict !== verdict) return false;
-    if (fuel !== 'ALL' && c.fuel !== fuel) return false;
-    if (bodyType !== 'ALL' && c.body_type !== bodyType) return false;
+    if (fP.size > 0 && !fP.has(c.platform)) return false;
+    if (fV.size > 0 && !fV.has(c.verdict)) return false;
+    if (fF.size > 0 && !fF.has(c.fuel)) return false;
+    if (fB.size > 0 && !fB.has(c.body_type)) return false;
     if (c.price > maxPrice) return false;
     if (c.mileage > maxMileage) return false;
     return true;
@@ -966,26 +1089,51 @@ function render() {
     case 'yearlyService': filtered.sort((a, b) => a.yearlyService - b.yearlyService); break;
   }
 
+  lastFiltered = filtered;
   updateStats(filtered);
 
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  if (currentPage > totalPages) currentPage = totalPages || 1;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+
   const resultsEl = document.getElementById('resultsCount');
-  resultsEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${cars.length} cars`;
+  resultsEl.innerHTML = `Showing <strong>${start + 1}–${Math.min(start + PAGE_SIZE, total)}</strong> of <strong>${fmt(total)}</strong> matches (${fmt(cars.length)} total)`;
 
   const grid = document.getElementById('grid');
-  if (filtered.length === 0) {
-    grid.innerHTML = '<div class="no-results"><h3>No cars match your filters</h3><p>Try adjusting the price range, mileage, or verdict filter.</p></div>';
+  if (total === 0) {
+    grid.innerHTML = '<div class="no-results"><h3>No cars match your filters</h3><p>Try adjusting the filters above.</p></div>';
+    document.getElementById('pagination').innerHTML = '';
     return;
   }
 
-  grid.innerHTML = filtered.map((c, i) => renderCard(c, i)).join('');
+  grid.innerHTML = page.map((c, i) => renderCard(c, i)).join('');
+
+  // Pagination controls
+  const pag = document.getElementById('pagination');
+  if (totalPages <= 1) { pag.innerHTML = ''; return; }
+  pag.innerHTML = `
+    <button onclick="goPage(1)" ${currentPage <= 1 ? 'disabled' : ''}>&laquo;</button>
+    <button onclick="goPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>&lsaquo; Prev</button>
+    <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+    <button onclick="goPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Next &rsaquo;</button>
+    <button onclick="goPage(${totalPages})" ${currentPage >= totalPages ? 'disabled' : ''}>&raquo;</button>
+  `;
+}
+
+function goPage(p) {
+  currentPage = p;
+  render();
+  window.scrollTo({ top: document.getElementById('grid').offsetTop - 80, behavior: 'smooth' });
 }
 
 // Event listeners
-['filterPlatform', 'filterVerdict', 'filterFuel', 'filterBody', 'sortBy'].forEach(id => {
-  document.getElementById(id).addEventListener('change', render);
+['sortBy'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => { currentPage = 1; render(); });
 });
 ['filterPrice', 'filterMileage'].forEach(id => {
-  document.getElementById(id).addEventListener('input', render);
+  document.getElementById(id).addEventListener('input', () => { currentPage = 1; render(); });
 });
 
 // Initial render
