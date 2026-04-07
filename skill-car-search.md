@@ -162,8 +162,17 @@ Read `config/cost-model.json`. For each car, calculate:
 - **Monthly budget** = fuel + insurance
 - **Yearly service cost** based on brand + powertrain
 
-### Step 5 — Evaluate Each Car
-For each car, assign a **verdict** and write a **2-3 sentence evaluation**. The HTML showcase has a "Read more" expand/collapse on each card (clamped to 2 lines by default), so evaluations CAN be longer than what's visible at first glance — write enough to be genuinely useful when expanded.
+### Step 5 — Evaluate Cars (Tiered)
+
+**ALL cars** go into the showcase — never drop cars to reduce workload. Use a tiered evaluation approach:
+
+**Tier 1 — Deep expert review (top ~200 by value score):**
+Write a 2-3 sentence evaluation with engine codes, cross-comparisons by rank, specific RED FLAGS. The HTML showcase has a "Read more" expand/collapse on each card, so write enough to be genuinely useful when expanded.
+
+**Tier 2 — Auto-generated 1-liner (all remaining cars):**
+Generate a short evaluation from the verdict + key data: e.g. "Solid Kia Stonic with 7-year warranty. 45k km is moderate for 2022. Located in Málaga." Still useful, just not the deep expert review.
+
+Every car — regardless of tier — gets a verdict assigned using the rules below.
 
 #### Verdict Taxonomy
 

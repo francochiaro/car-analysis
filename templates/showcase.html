@@ -696,6 +696,12 @@
       </select>
     </div>
     <div class="control-group">
+      <label>Body Type</label>
+      <select id="filterBody">
+        <option value="ALL">All Types</option>
+      </select>
+    </div>
+    <div class="control-group">
       <label>Max Price</label>
       <input type="range" id="filterPrice" min="0" max="100000" value="100000" step="500">
       <div class="range-value" id="priceValue">&euro;100,000</div>
@@ -744,6 +750,16 @@ const cars = /*CARS_JSON*/[];
     opt.value = p;
     opt.textContent = p;
     platformSelect.appendChild(opt);
+  });
+
+  // Body type filter — dynamically populate from data
+  const bodyTypes = [...new Set(cars.map(c => c.body_type).filter(Boolean))].sort();
+  const bodySelect = document.getElementById('filterBody');
+  bodyTypes.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b;
+    opt.textContent = b;
+    bodySelect.appendChild(opt);
   });
 
   // Price range
@@ -923,6 +939,7 @@ function render() {
   const platform = document.getElementById('filterPlatform').value;
   const verdict = document.getElementById('filterVerdict').value;
   const fuel = document.getElementById('filterFuel').value;
+  const bodyType = document.getElementById('filterBody').value;
   const maxPrice = parseInt(document.getElementById('filterPrice').value);
   const maxMileage = parseInt(document.getElementById('filterMileage').value);
   const sortBy = document.getElementById('sortBy').value;
@@ -934,6 +951,7 @@ function render() {
     if (platform !== 'ALL' && c.platform !== platform) return false;
     if (verdict !== 'ALL' && c.verdict !== verdict) return false;
     if (fuel !== 'ALL' && c.fuel !== fuel) return false;
+    if (bodyType !== 'ALL' && c.body_type !== bodyType) return false;
     if (c.price > maxPrice) return false;
     if (c.mileage > maxMileage) return false;
     return true;
@@ -963,7 +981,7 @@ function render() {
 }
 
 // Event listeners
-['filterPlatform', 'filterVerdict', 'filterFuel', 'sortBy'].forEach(id => {
+['filterPlatform', 'filterVerdict', 'filterFuel', 'filterBody', 'sortBy'].forEach(id => {
   document.getElementById(id).addEventListener('change', render);
 });
 ['filterPrice', 'filterMileage'].forEach(id => {
